@@ -346,20 +346,15 @@ def gzip_main(field):
             main_literals.min_max_bits()
             main_distances.min_max_bits()
 
-            print('D: Dump literals <-> bit widths')
+            literal_lengths_map = {}
             for hl in main_literals.table:
                 if 0 <= hl.code <= 255:
-                    c = chr(hl.code)
-                    if c >= ' ' and c <= '~':
-                        cs = repr(c)
-                    else:
-                        cs = '\\x%02d' % (hl.code,)
-
-                    print('D:    %s %r' % (cs, hl.bits))
+                    literal_lengths_map[chr(hl.code)] = hl.bits
 
             literal_count = 0
             literal_start = 0
 
+            symbols = []
             while True:
                 lz_start = b.tellbits()
                 r = main_literals.find_next_symbol(b)
@@ -368,7 +363,7 @@ def gzip_main(field):
                         literal_start = lz_start
                     literal_count += 1
                     num_bits = b.tellbits() - lz_start
-                    print('D: literal %r - %d bits' % (chr(r), num_bits))
+                    symbols.append((chr(r), num_bits))
                     out += chr(r)
                 elif r == 256:
                     if literal_count > 0:
@@ -399,7 +394,7 @@ def gzip_main(field):
                             out += out[-distance:length-distance]
                         # print 'dictionary lookup: length', cached_length,
                         # print 'copy', -distance, 'num bits', b.tellbits() - lz_start, 'data', `out[-cached_length:]`
-                        print('D: copy %r - %d bits' % (out[-cached_length:], b.tellbits() - lz_start))
+                        symbols.append((out[-cached_length:], b.tellbits() - lz_start))
 
                     elif 30 <= r1 <= 31:
                         raise "illegal unused distance symbol in use @" + `b.tell()`
@@ -424,7 +419,7 @@ def gzip_main(field):
     #print 'crc', hex(crc), 'final length', final_length
     #print 'header 0 count 0 bits', b.tellbits()-bfooter_start
 
-    return out
+    return literal_lengths_map, symbols
 
 def _main():
     filename = sys.argv[1]
@@ -433,13 +428,17 @@ def _main():
 
     magic = field.readbits(16)
     if magic == 0x1f8b: # GZip
-        out = gzip_main(field)
+        literal_lengths_map, symbols = gzip_main(field)
+        for c, num_bits in sorted(literal_lengths_map.iteritems(), key=lambda x: x[1]):
+            print('cost of %r = %d bits' % (c, num_bits))
+        for (symbol, num_bits) in symbols:
+            if len(symbol) == 1:
+                print('literal %r - %d bits' % (symbol, num_bits))
+            else:
+                print('copy %r - %d bits' % (symbol, num_bits))
     else:
         raise "Unknown file magic "+hex(magic)+", not a gzip file"
 
-    f = open('out', 'w')
-    f.write(out)
-    f.close()
     input.close()
 
 if __name__=='__main__':
