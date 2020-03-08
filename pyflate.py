@@ -421,7 +421,7 @@ def gzip_main(field):
 
     return literal_lengths_map, symbols
 
-def _main():
+def doit():
     filename = sys.argv[1]
     input = open(filename)
     field = RBitfield(input)
@@ -440,26 +440,3 @@ def _main():
         raise "Unknown file magic "+hex(magic)+", not a gzip file"
 
     input.close()
-
-if __name__=='__main__':
-    if len(sys.argv) != 2:
-        program = sys.argv[0]
-        print program +':', 'usage:', program, '<filename.gz>|<filename.bz2>'
-        print '\tThe contents will be decoded and decompressed plaintext written to "./out".'
-        sys.exit(0)
-
-    profile_code = False
-    if not profile_code:
-        try:
-            import psyco
-            psyco.full()
-            profile_code = False
-        except:
-            pass
-    if profile_code:
-        import profile
-        profile.run('_main()')
-    else:
-        _main()
-
-
