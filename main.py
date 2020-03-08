@@ -28,8 +28,8 @@ def color_on(color_tuple):
     print(ansi_color(False, *color_tuple), end='') # Background color
 
 def color_off():
-    #print(ansi_color(False, 0, 0, 0), end='') # Black background
-    ansi_reset()
+    print(ansi_color(False, 0, 0, 0), end='') # Black background
+    #ansi_reset()
 
 indent = 0
 at_newline = False
