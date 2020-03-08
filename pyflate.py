@@ -421,22 +421,12 @@ def gzip_main(field):
 
     return literal_lengths_map, symbols
 
-def doit():
-    filename = sys.argv[1]
-    input = open(filename)
-    field = RBitfield(input)
+def doit(filename):
+    with open(filename) as input:
+        field = RBitfield(input)
 
-    magic = field.readbits(16)
-    if magic == 0x1f8b: # GZip
-        literal_lengths_map, symbols = gzip_main(field)
-        for c, num_bits in sorted(literal_lengths_map.iteritems(), key=lambda x: x[1]):
-            print('cost of %r = %d bits' % (c, num_bits))
-        for (symbol, num_bits) in symbols:
-            if len(symbol) == 1:
-                print('literal %r - %d bits' % (symbol, num_bits))
-            else:
-                print('copy %r - %d bits' % (symbol, num_bits))
-    else:
-        raise "Unknown file magic "+hex(magic)+", not a gzip file"
-
-    input.close()
+        magic = field.readbits(16)
+        if magic == 0x1f8b: # GZip
+            return gzip_main(field)
+        else:
+            raise "Unknown file magic "+hex(magic)+", not a gzip file"
