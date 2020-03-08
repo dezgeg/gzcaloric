@@ -14,6 +14,8 @@
 # see 'bwt_reverse()'.  Correct output is produced in all test cases
 # but ideally the problem would be found...
 
+import sys
+
 class BitfieldBase:
     def __init__(self, x):
         if isinstance(x,BitfieldBase):
@@ -424,8 +426,6 @@ def gzip_main(field):
 
     return out
 
-import sys
-
 def _main():
     filename = sys.argv[1]
     input = open(filename)
@@ -434,10 +434,8 @@ def _main():
     magic = field.readbits(16)
     if magic == 0x1f8b: # GZip
         out = gzip_main(field)
-    elif magic == 0x425a: # BZip2
-        out = bzip2_main(field)
     else:
-        raise "Unknown file magic "+hex(magic)+", not a gzip/bzip2 file"
+        raise "Unknown file magic "+hex(magic)+", not a gzip file"
 
     f = open('out', 'w')
     f.write(out)
