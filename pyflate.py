@@ -173,10 +173,10 @@ class HuffmanTable:
                 cached_length = x.bits
             if (reversed and x.reverse_symbol == cached) or (not reversed and x.symbol == cached):
                 field.readbits(x.bits)
-                print "found symbol", hex(cached), "of len", cached_length, "mapping to", hex(x.code)
+                # print "found symbol", hex(cached), "of len", cached_length, "mapping to", hex(x.code)
                 return x.code
         raise "unfound symbol, even after end of table @ " + `field.tell()`
-            
+
         for bits in range(self.min_bits, self.max_bits + 1):
             #print printbits(field.snoopbits(bits),bits)
             r = self._find_symbol(bits, field.snoopbits(bits), self.table)
@@ -190,7 +190,7 @@ class OrderedHuffmanTable(HuffmanTable):
     def __init__(self, lengths):
         l = len(lengths)
         z = map(None, range(l), lengths) + [(l, -1)]
-        print "lengths to spans:", z
+        # print "lengths to spans:", z
         HuffmanTable.__init__(self, z)
 
 def code_length_orders(i):
@@ -227,13 +227,13 @@ def gzip_main(field):
 
     # Use flags, drop modification time, extra flags and OS creator type.
     flags = b.readbits(8)
-    print 'flags', hex(flags)
+    # print 'flags', hex(flags)
     mtime = b.readbits(32)
-    print 'mtime', hex(mtime)
+    # print 'mtime', hex(mtime)
     extra_flags = b.readbits(8)
-    print 'extra_flags', hex(extra_flags)
+    # print 'extra_flags', hex(extra_flags)
     os_type = b.readbits(8)
-    print 'os_type', hex(os_type)
+    # print 'os_type', hex(os_type)
 
     if flags & 0x04: # structured GZ_FEXTRA miscellaneous data
         xlen = b.readbits(16)
@@ -247,7 +247,7 @@ def gzip_main(field):
     if flags & 0x02: # header-only GZ_FHCRC checksum
         b.readbits(16)
 
-    print "gzip header skip", b.tell()
+    # print "gzip header skip", b.tell()
     out = ''
 
     #print 'header 0 count 0 bits', b.tellbits()
@@ -255,13 +255,13 @@ def gzip_main(field):
     while True:
         header_start = b.tell()
         bheader_start = b.tellbits()
-        print 'new block at', b.tell()
+        # print 'new block at', b.tell()
         lastbit = b.readbits(1)
-        print "last bit", hex(lastbit)
+        # print "last bit", hex(lastbit)
         blocktype = b.readbits(2)
-        print "deflate-blocktype", blocktype, ["stored", "static huff", "dyna huff"][blocktype], 'beginning at', header_start
+        # print "deflate-blocktype", blocktype, ["stored", "static huff", "dyna huff"][blocktype], 'beginning at', header_start
 
-        print 'raw block data at', b.tell()
+        # print 'raw block data at', b.tell()
         if blocktype == 0:
             b.align()
             length = b.readbits(16)
@@ -289,13 +289,13 @@ def gzip_main(field):
                 literals = len_codes + 257
                 distances = b.readbits(5) + 1
                 code_lengths_length = b.readbits(4) + 4
-                print "Dynamic Huffman tree: length codes: %s, distances codes: %s, code_lengths_length: %s" % \
-                    (len_codes, distances, code_lengths_length)
+                # print "Dynamic Huffman tree: length codes: %s, distances codes: %s, code_lengths_length: %s" % \
+                #    (len_codes, distances, code_lengths_length)
 
                 l = [0] * 19
                 for i in range(code_lengths_length):
                     l[code_length_orders(i)] = b.readbits(3)
-                print "lengths:", l
+                # print "lengths:", l
 
                 dynamic_codes = OrderedHuffmanTable(l)
                 dynamic_codes.populate_huffman_symbols()
@@ -326,16 +326,16 @@ def gzip_main(field):
                     code_lengths += [what] * count
                     n += count
 
-                print "Literals/len lengths:", code_lengths[:literals]
-                print "Dist lengths:", code_lengths[literals:]
+                # print "Literals/len lengths:", code_lengths[:literals]
+                # print "Dist lengths:", code_lengths[literals:]
                 main_literals = OrderedHuffmanTable(code_lengths[:literals])
                 main_distances = OrderedHuffmanTable(code_lengths[literals:])
-                print "Read dynamic huffman tables", b.tellbits() - dyna_start, "bits"
+                # print "Read dynamic huffman tables", b.tellbits() - dyna_start, "bits"
 
             # Common path for both Static and Dynamic Huffman decode now
 
             data_start = b.tell()
-            print 'raw data at', data_start, 'bits', b.tellbits() - bheader_start
+            # print 'raw data at', data_start, 'bits', b.tellbits() - bheader_start
             #print 'header 0 count 0 bits', b.tellbits() - bheader_start
 
             main_literals.populate_huffman_symbols()
@@ -343,6 +343,17 @@ def gzip_main(field):
 
             main_literals.min_max_bits()
             main_distances.min_max_bits()
+
+            print('D: Dump literals <-> bit widths')
+            for hl in main_literals.table:
+                if 0 <= hl.code <= 255:
+                    c = chr(hl.code)
+                    if c >= ' ' and c <= '~':
+                        cs = repr(c)
+                    else:
+                        cs = '\\x%02d' % (hl.code,)
+
+                    print('D:    %s %r' % (cs, hl.bits))
 
             literal_count = 0
             literal_start = 0
@@ -354,26 +365,27 @@ def gzip_main(field):
                     if literal_count == 0:
                         literal_start = lz_start
                     literal_count += 1
-                    print 'found literal', `chr(r)`
+                    num_bits = b.tellbits() - lz_start
+                    print('D: literal %r - %d bits' % (chr(r), num_bits))
                     out += chr(r)
                 elif r == 256:
                     if literal_count > 0:
                         #print 'add 0 count', literal_count, 'bits', lz_start-literal_start, 'data', `out[-literal_count:]`
                         literal_count = 0
-                    print 'eos 0 count 0 bits', b.tellbits() - lz_start
-                    print 'end of Huffman block encountered'
+                    # print 'eos 0 count 0 bits', b.tellbits() - lz_start
+                    # print 'end of Huffman block encountered'
                     break
                 elif 257 <= r <= 285: # dictionary lookup
                     if literal_count > 0:
                         #print 'add 0 count', literal_count, 'bits', lz_start-literal_start, 'data', `out[-literal_count:]`
                         literal_count = 0
-                    print "reading", extra_length_bits(r), "extra bits for len"
+                    # print "reading", extra_length_bits(r), "extra bits for len"
                     length_extra = b.readbits(extra_length_bits(r))
                     length = length_base(r) + length_extra
                     
                     r1 = main_distances.find_next_symbol(b)
                     if 0 <= r1 <= 29:
-                        print "reading", extra_distance_bits(r1), "extra bits for dist"
+                        # print "reading", extra_distance_bits(r1), "extra bits for dist"
                         distance = distance_base(r1) + b.readbits(extra_distance_bits(r1))
                         cached_length = length
                         while length > distance:
@@ -383,8 +395,10 @@ def gzip_main(field):
                             out += out[-distance:]
                         else:
                             out += out[-distance:length-distance]
-                        print 'dictionary lookup: length', cached_length,
-                        print 'copy', -distance, 'num bits', b.tellbits() - lz_start, 'data', `out[-cached_length:]`
+                        # print 'dictionary lookup: length', cached_length,
+                        # print 'copy', -distance, 'num bits', b.tellbits() - lz_start, 'data', `out[-cached_length:]`
+                        print('D: copy %r - %d bits' % (out[-cached_length:], b.tellbits() - lz_start))
+
                     elif 30 <= r1 <= 31:
                         raise "illegal unused distance symbol in use @" + `b.tell()`
                 elif 286 <= r <= 287:
@@ -393,7 +407,7 @@ def gzip_main(field):
             raise "illegal unused blocktype in use @" + `b.tell()`
 
         if lastbit:
-            print "this was the last block, time to leave", b.tell()
+            # print "this was the last block, time to leave", b.tell()
             break
 
     footer_start = b.tell()
@@ -404,7 +418,7 @@ def gzip_main(field):
     #print len(out)
     next_unused = b.tell()
     #print 'deflate-end-of-stream', 5, 'beginning at', footer_start, 'raw data at', next_unused, 'bits', b.tellbits() - bfooter_start
-    print 'deflate-end-of-stream'
+    #print 'deflate-end-of-stream'
     #print 'crc', hex(crc), 'final length', final_length
     #print 'header 0 count 0 bits', b.tellbits()-bfooter_start
 
