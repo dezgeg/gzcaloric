@@ -1,4 +1,5 @@
 from __future__ import print_function
+import colorsys
 import sys
 import pyflate
 
@@ -6,15 +7,13 @@ import pyflate
 CATEGORY_LITERAL = 'l'
 CATEGORY_REF = 'r'
 
+HUE_RED = 0
+HUE_GREEN = 1. / 3.
+
 if len(sys.argv) != 2:
     program = sys.argv[0]
     print(program +':', 'usage:', program, '<filename.gz>')
     sys.exit(0)
-
-literal_lengths_map, symbols = pyflate.doit(sys.argv[1])
-
-#for c, num_bits in sorted(literal_lengths_map.iteritems(), key=lambda x: x[1]):
-#    print('cost of %r = %d bits' % (c, num_bits))
 
 def ansi_color(is_fg, r, g, b):
     bg_fg = 38 if is_fg else 48
@@ -23,13 +22,29 @@ def ansi_color(is_fg, r, g, b):
 def ansi_reset():
     print('\x1b[0m', end='')
 
-def color_on(color_tuple):
+def color_on(category, num_bits):
     print(ansi_color(True, 0, 0, 0), end='') # Black foreground
-    print(ansi_color(False, *color_tuple), end='') # Background color
+    if category == CATEGORY_LITERAL:
+        badness = (num_bits - min_bits) / float(max_bits - min_bits)
+        bg_color = colorsys.hls_to_rgb((1. - badness) * HUE_GREEN, 0.5, 1.)
+        print(ansi_color(False, *map(lambda x: x * 255, bg_color)), end='') # Background color
+    else:
+        print(ansi_color(False, 0, 0, 255), end='') # Background color
 
 def color_off():
     print(ansi_color(False, 0, 0, 0), end='') # Black background
     #ansi_reset()
+
+literal_lengths_map, symbols = pyflate.doit(sys.argv[1])
+
+sorted_lengths = list(sorted(literal_lengths_map.iteritems(), key=lambda x: x[1]))
+min_bits = sorted_lengths[0][1]
+max_bits = sorted_lengths[-1][1]
+for c, num_bits in sorted_lengths:
+    color_on(CATEGORY_LITERAL, num_bits)
+    print(' ', end='')
+    ansi_reset()
+    print('cost of %r = %d bits' % (c, num_bits))
 
 indent = 0
 at_newline = False
@@ -37,17 +52,15 @@ bracket_stack = []
 for (symbol, num_bits) in symbols:
     if len(symbol) == 1:
         category = CATEGORY_LITERAL
-        color = (255, 0, 0)
     else:
         category = CATEGORY_REF
-        color = (0, 0, 255)
 
     for c in symbol:
-        color_on(color)
+        color_on(category, num_bits)
         if at_newline:
             color_off()
             print('    ' * indent, end='')
-            color_on(color)
+            color_on(category, num_bits)
             at_newline = False
 
         if c == '{':
@@ -60,7 +73,7 @@ for (symbol, num_bits) in symbols:
             print()
             color_off()
             print('    ' * indent, end='')
-            color_on(color)
+            color_on(category, num_bits)
             at_newline = True
             bracket_stack.pop()
         elif c == '(':
