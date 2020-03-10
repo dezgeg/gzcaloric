@@ -37,7 +37,7 @@ def color_off():
 
 literal_lengths_map, symbols = pyflate.doit(sys.argv[1])
 
-sorted_lengths = list(sorted(literal_lengths_map.iteritems(), key=lambda x: x[1]))
+sorted_lengths = list(sorted(literal_lengths_map.iteritems(), key=lambda x: (x[1], x[0])))
 min_bits = sorted_lengths[0][1]
 max_bits = sorted_lengths[-1][1]
 for c, num_bits in sorted_lengths:
@@ -86,7 +86,11 @@ for (symbol, num_bits) in symbols:
             if len(bracket_stack) == 0 or bracket_stack[-1] == '{':
                 at_newline = True
 
-        print(c, end='')
+        if c != '\x00':
+            if c < ' ' or c > '~':
+                c = repr(c)[1:-1]
+            print(c, end='')
+
         if at_newline:
             color_off()
             print()

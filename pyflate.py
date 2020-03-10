@@ -128,6 +128,17 @@ def reverse_bits(v, n):
         b >>= 1
     return z
 
+def reverse_bytes(v, n):
+    a = 0xff << 0
+    b = 0xff << (n - 8)
+    z = 0
+    for i in range(n-8, -8, -16):
+        z |= (v >> i) & a
+        z |= (v << i) & b
+        a <<= 8
+        b >>= 8
+    return z
+
 class HuffmanTable:
     def __init__(self, bootstrap):
         l = []
@@ -221,36 +232,10 @@ def extra_length_bits(n):
         raise "illegal length code"
 
 # Sixteen bits of magic have been removed by the time we start decoding
-def gzip_main(field):
-    b = Bitfield(field)
-    method = b.readbits(8)
-    if method != 8:
-        raise "Unknown (not type eight DEFLATE) compression method"
-
-    # Use flags, drop modification time, extra flags and OS creator type.
-    flags = b.readbits(8)
-    # print 'flags', hex(flags)
-    mtime = b.readbits(32)
-    # print 'mtime', hex(mtime)
-    extra_flags = b.readbits(8)
-    # print 'extra_flags', hex(extra_flags)
-    os_type = b.readbits(8)
-    # print 'os_type', hex(os_type)
-
-    if flags & 0x04: # structured GZ_FEXTRA miscellaneous data
-        xlen = b.readbits(16)
-        b.dropbytes(xlen)
-    while flags & 0x08: # original GZ_FNAME filename
-        if not b.readbits(8):
-            break
-    while flags & 0x10: # human readable GZ_FCOMMENT
-        if not b.readbits(8):
-            break
-    if flags & 0x02: # header-only GZ_FHCRC checksum
-        b.readbits(16)
-
-    # print "gzip header skip", b.tell()
+def inflate(b):
     out = ''
+    symbols = []
+    literal_lengths_map = {} # TODO what to do about block splits?
 
     #print 'header 0 count 0 bits', b.tellbits()
 
@@ -346,7 +331,6 @@ def gzip_main(field):
             main_literals.min_max_bits()
             main_distances.min_max_bits()
 
-            literal_lengths_map = {}
             for hl in main_literals.table:
                 if 0 <= hl.code <= 255:
                     literal_lengths_map[chr(hl.code)] = hl.bits
@@ -354,7 +338,6 @@ def gzip_main(field):
             literal_count = 0
             literal_start = 0
 
-            symbols = []
             while True:
                 lz_start = b.tellbits()
                 r = main_literals.find_next_symbol(b)
@@ -407,26 +390,46 @@ def gzip_main(field):
             # print "this was the last block, time to leave", b.tell()
             break
 
-    footer_start = b.tell()
-    bfooter_start = b.tellbits()
-    b.align()
-    crc = b.readbits(32)
-    final_length = b.readbits(32)
-    #print len(out)
-    next_unused = b.tell()
-    #print 'deflate-end-of-stream', 5, 'beginning at', footer_start, 'raw data at', next_unused, 'bits', b.tellbits() - bfooter_start
-    #print 'deflate-end-of-stream'
-    #print 'crc', hex(crc), 'final length', final_length
-    #print 'header 0 count 0 bits', b.tellbits()-bfooter_start
-
     return literal_lengths_map, symbols
 
 def doit(filename):
     with open(filename) as input:
         field = RBitfield(input)
+        b = Bitfield(field)
 
         magic = field.readbits(16)
         if magic == 0x1f8b: # GZip
-            return gzip_main(field)
+            method = b.readbits(8)
+            if method != 8:
+                raise "Unknown (not type eight DEFLATE) compression method"
+
+            flags = b.readbits(8)
+            mtime = b.readbits(32)
+            extra_flags = b.readbits(8)
+            os_type = b.readbits(8)
+
+            if flags & 0x04: # structured GZ_FEXTRA miscellaneous data
+                xlen = b.readbits(16)
+                b.dropbytes(xlen)
+            while flags & 0x08: # original GZ_FNAME filename
+                if not b.readbits(8):
+                    break
+            while flags & 0x10: # human readable GZ_FCOMMENT
+                if not b.readbits(8):
+                    break
+            if flags & 0x02: # header-only GZ_FHCRC checksum
+                b.readbits(16)
+
+            return inflate(b)
+        elif magic == 0x8950: # PN (aka start of PNG header)
+            b.readbits(8 * 6) # Skip rest of header (assume valid)
+
+            while True:
+                length = reverse_bytes(b.readbits(32), 32)
+                tag = reverse_bytes(b.readbits(32), 32)
+                if tag == 0x49444154: # IDAT
+                    b.readbits(16) # Ignore additional header in IDAT chunk
+                    return inflate(b)
+                b.readbits(8 * (length + 4)) # Ignore data + CRC
         else:
             raise "Unknown file magic "+hex(magic)+", not a gzip file"
