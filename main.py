@@ -37,6 +37,11 @@ def color_off():
 
 literal_lengths_map, symbols = pyflate.doit(sys.argv[1])
 
+histogram = {}
+for (symbol, num_bits) in symbols:
+    for c in symbol:
+        histogram[c] = histogram.get(c, 0) + 1
+
 sorted_lengths = list(sorted(literal_lengths_map.iteritems(), key=lambda x: (x[1], x[0])))
 min_bits = sorted_lengths[0][1]
 max_bits = sorted_lengths[-1][1]
@@ -44,10 +49,11 @@ for c, num_bits in sorted_lengths:
     color_on(CATEGORY_LITERAL, num_bits)
     print(' ', end='')
     ansi_reset()
-    print('cost of %r = %d bits' % (c, num_bits))
+    print('cost of %r = %d bits, used %d times' % (c, num_bits, histogram.get(c, 0)))
 
 indent = 0
 at_newline = False
+newline_unless_semicolon = False
 bracket_stack = []
 for (symbol, num_bits) in symbols:
     if len(symbol) == 1:
@@ -57,6 +63,12 @@ for (symbol, num_bits) in symbols:
 
     for c in symbol:
         color_on(category, num_bits)
+
+        if newline_unless_semicolon and c not in ',;':
+            print()
+            at_newline = True
+        newline_unless_semicolon = False
+
         if at_newline:
             color_off()
             print('    ' * indent, end='')
@@ -74,7 +86,7 @@ for (symbol, num_bits) in symbols:
             color_off()
             print('    ' * indent, end='')
             color_on(category, num_bits)
-            at_newline = True
+            newline_unless_semicolon = True
             bracket_stack.pop()
         elif c == '(':
             bracket_stack.append('(')
