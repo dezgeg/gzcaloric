@@ -1,4 +1,5 @@
 from __future__ import print_function
+import argparse
 import colorsys
 import sys
 import pyflate
@@ -10,24 +11,24 @@ CATEGORY_REF = 'r'
 HUE_RED = 0
 HUE_GREEN = 1. / 3.
 
-if len(sys.argv) != 2:
-    program = sys.argv[0]
-    print(program +':', 'usage:', program, '<filename.gz>')
-    sys.exit(0)
-
-enable_colors = True
+parser = argparse.ArgumentParser()
+parser.add_argument('inputfile', help='Path to .png/.gz file.')
+parser.add_argument('-n', '--no-color', action='store_true', help='Skip colors (just pretty-print)')
+parser.add_argument('-r', '--no-format', action='store_true', help='Skip code formatting')
+parser.add_argument('-b', '--bicolor', action='store_true', help='Just show literals vs. backreferences')
+args = parser.parse_args()
 
 def ansi_color(is_fg, r, g, b):
     bg_fg = 38 if is_fg else 48
     return "\x1b[%d;2;%d;%d;%dm" % (bg_fg, r, g, b)
 
 def ansi_reset():
-    if not enable_colors:
+    if args.no_color:
         return
     print('\x1b[0m', end='')
 
 def color_on(category, num_bits):
-    if not enable_colors:
+    if args.no_color:
         return
     print(ansi_color(True, 0, 0, 0), end='') # Black foreground
     if category == CATEGORY_LITERAL:
@@ -38,12 +39,12 @@ def color_on(category, num_bits):
         print(ansi_color(False, 0, 0, 255), end='') # Background color
 
 def color_off():
-    if not enable_colors:
+    if args.no_color:
         return
     print(ansi_color(False, 0, 0, 0), end='') # Black background
     #ansi_reset()
 
-literal_lengths_map, symbols = pyflate.doit(sys.argv[1])
+literal_lengths_map, symbols = pyflate.doit(args.inputfile)
 
 histogram = {}
 for (symbol, num_bits) in symbols:
