@@ -15,14 +15,20 @@ if len(sys.argv) != 2:
     print(program +':', 'usage:', program, '<filename.gz>')
     sys.exit(0)
 
+enable_colors = True
+
 def ansi_color(is_fg, r, g, b):
     bg_fg = 38 if is_fg else 48
     return "\x1b[%d;2;%d;%d;%dm" % (bg_fg, r, g, b)
 
 def ansi_reset():
+    if not enable_colors:
+        return
     print('\x1b[0m', end='')
 
 def color_on(category, num_bits):
+    if not enable_colors:
+        return
     print(ansi_color(True, 0, 0, 0), end='') # Black foreground
     if category == CATEGORY_LITERAL:
         badness = (num_bits - min_bits) / float(max_bits - min_bits)
@@ -32,6 +38,8 @@ def color_on(category, num_bits):
         print(ansi_color(False, 0, 0, 255), end='') # Background color
 
 def color_off():
+    if not enable_colors:
+        return
     print(ansi_color(False, 0, 0, 0), end='') # Black background
     #ansi_reset()
 
