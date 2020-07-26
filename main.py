@@ -108,10 +108,11 @@ for (symbol, num_compressed_bits) in symbols:
         newline_unless_semicolon = False
 
         if c == '}':
-            if prev_char != ';':
-                print()
-                last_char_newline = True
             indent -= 1
+            if prev_char not in ';}':
+                print()
+                print('    ' * indent, end='')
+                last_char_newline = False
             newline_unless_semicolon = True
             bracket_stack.pop()
         if at_newline:
