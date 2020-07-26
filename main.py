@@ -71,7 +71,6 @@ def color_off():
         print("</span>", end='')
     else:
         print(ansi_color(False, 0, 0, 0), end='') # Black background
-        #ansi_reset()
 
 literal_lengths_map, symbols = pyflate.doit(args.inputfile)
 
@@ -100,11 +99,16 @@ for (symbol, num_compressed_bits) in symbols:
     num_decompressed_bytes = len(symbol)
     color_on(num_decompressed_bytes, num_compressed_bits)
     for c in symbol:
-
         if newline_unless_semicolon and c not in ',;':
             print()
             at_newline = True
         newline_unless_semicolon = False
+
+        if c == '}':
+            #print('X', end='')
+            indent -= 1
+            newline_unless_semicolon = True
+            bracket_stack.pop()
 
         if at_newline:
             color_off()
@@ -116,15 +120,6 @@ for (symbol, num_compressed_bits) in symbols:
             indent += 1
             at_newline = True
             bracket_stack.append('{')
-        elif c == '}':
-            indent -= 1
-            color_off()
-            print()
-            color_off()
-            print('    ' * indent, end='')
-            color_on(num_decompressed_bytes, num_compressed_bits)
-            newline_unless_semicolon = True
-            bracket_stack.pop()
         elif c == '(':
             bracket_stack.append('(')
         elif c == ')':
