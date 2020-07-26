@@ -93,26 +93,31 @@ if args.html:
 
 indent = 0
 at_newline = False
+last_char_newline = False
 newline_unless_semicolon = False
 bracket_stack = []
+prev_char = None
 for (symbol, num_compressed_bits) in symbols:
     num_decompressed_bytes = len(symbol)
     color_on(num_decompressed_bytes, num_compressed_bits)
     for c in symbol:
         if newline_unless_semicolon and c not in ',;':
             print()
+            last_char_newline = True
             at_newline = True
         newline_unless_semicolon = False
 
         if c == '}':
-            #print('X', end='')
+            if prev_char != ';':
+                print()
+                last_char_newline = True
             indent -= 1
             newline_unless_semicolon = True
             bracket_stack.pop()
-
         if at_newline:
             color_off()
             print('    ' * indent, end='')
+            last_char_newline = False
             color_on(num_decompressed_bytes, num_compressed_bits)
             at_newline = False
 
@@ -134,12 +139,18 @@ for (symbol, num_compressed_bits) in symbols:
             if c < ' ' or c > '~':
                 c = repr(c)[1:-1]
             print(c, end='')
+            last_char_newline = False
 
         if at_newline:
             color_off()
             print()
+            last_char_newline = True
+        prev_char = c
     color_off()
 
 color_off()
+if not last_char_newline:
+    print()
+
 if args.html:
     print('</pre></body>')
