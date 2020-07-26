@@ -131,7 +131,8 @@ for (symbol, num_compressed_bits) in symbols:
         elif c == ')':
             bracket_stack.pop()
         elif c == ';':
-            at_newline = True
+            if len(bracket_stack) == 0 or bracket_stack[-1] == '{':
+                at_newline = True
         elif c == ',':
             if len(bracket_stack) == 0 or bracket_stack[-1] == '{':
                 at_newline = True
