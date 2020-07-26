@@ -145,12 +145,19 @@ for (symbol, num_compressed_bits) in symbols:
             indent += 1
             at_newline = True
             bracket_stack.append('{')
+        if c == '`':
+            if len(bracket_stack) == 0 or bracket_stack[-1] != '`':
+                bracket_stack.append('`')
+                indent += 1
+            else:
+                indent -= 1
+                bracket_stack.pop()
         elif c == '(':
             bracket_stack.append('(')
         elif c == ')':
             bracket_stack.pop()
         elif c == ';':
-            if len(bracket_stack) == 0 or bracket_stack[-1] == '{':
+            if len(bracket_stack) == 0 or bracket_stack[-1] in '{`':
                 at_newline = True
         elif c == ',':
             if len(bracket_stack) == 0 or bracket_stack[-1] == '{':
