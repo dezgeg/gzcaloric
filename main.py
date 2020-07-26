@@ -128,8 +128,10 @@ for (symbol, num_compressed_bits) in symbols:
             indent -= 1
             if prev_char not in ';}':
                 print()
+                color_off()
                 print('    ' * indent, end='')
                 last_char_newline = False
+                color_on(num_decompressed_bytes, num_compressed_bits)
             newline_unless_semicolon = True
             bracket_stack.pop()
         if at_newline:
