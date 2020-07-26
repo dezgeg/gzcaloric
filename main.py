@@ -89,7 +89,8 @@ max_bits = sorted_lengths[-1][1]
 #    print('cost of %r = %d bits, used %d times' % (c, num_bits, histogram.get(c, 0)))
 
 if args.html:
-    print("<body style='background-color: #888888; color: #ffffff; font-size: 16px; line-height: 120%; letter-spacing: 1px; text-shadow: 1px 1px #000000;'><pre>")
+    print("<html><head><style>span { padding-bottom: 4px; }</style></head><body style='background-color: #888888; color: #ffffff; font-size: 16px; line-height: 23px; letter-spacing: 1px; text-shadow: 1px 1px 1px black;'><pre>")
+
 
 indent = 0
 at_newline = False
@@ -155,4 +156,4 @@ if not last_char_newline:
     print()
 
 if args.html:
-    print('</pre></body>')
+    print('</pre></body></html>')
