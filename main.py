@@ -8,8 +8,24 @@ import pyflate
 CATEGORY_LITERAL = 'l'
 CATEGORY_REF = 'r'
 
-HUE_RED = 0
-HUE_GREEN = 1. / 3.
+COLOR_MAP = [
+    (0x00, 0x05, 0x60), # less than 1 bit   - midnight blue
+    (0x02, 0x3D, 0x9A), # less than 2 bits  - dark blue
+    (0x00, 0x5F, 0xD3), # less than 3 bits  - royal blue
+    (0x01, 0x86, 0xC0), # less than 4 bits  - teal
+    (0x4A, 0xB0, 0x3D), # less than 5 bits  - emerald green
+    (0xB5, 0xD0, 0x00), # less than 6 bits  - chartreuse
+    (0xEB, 0xD1, 0x09), # less than 7 bits  - yellow
+    (0xFB, 0xA7, 0x0F), # less than 8 bits  - orange
+    (0xEE, 0x00, 0x00),       # less than 9 bits  - bright red
+    (0xD0, 0x00, 0x00),       # less than 10 bits - darker tones of red from this point
+    (0xB2, 0x00, 0x00),       # less than 11 bits
+    (0x95, 0x00, 0x00),       # less than 12 bits
+    (0x77, 0x00, 0x00),       # less than 13 bits
+    (0x5a, 0x00, 0x00),       # less than 14 bits
+    (0x3C, 0x00, 0x00),       # less than 15 bits
+    (0x1E, 0x00, 0x00),       # less than 16 bits
+]
 
 parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument('inputfile', help='Path to .png/.gz file.')
@@ -28,13 +44,18 @@ def ansi_reset():
         return
     print('\x1b[0m', end='')
 
-def color_on(category, num_bits):
+def color_on(num_decompressed_bytes, num_compressed_bits):
     if args.no_color:
         return
 
-    badness = (num_bits - min_bits) / float(max_bits - min_bits)
-    bg_color = colorsys.hls_to_rgb((1. - badness) * HUE_GREEN, 0.5, 1.)
-    bg_color = tuple(map(lambda x: x * 255, bg_color))
+    if num_decompressed_bytes == 1:
+        category = CATEGORY_LITERAL
+    else:
+        category = CATEGORY_REF
+
+    ratio = num_compressed_bits / float(num_decompressed_bytes)
+    badness = int(ratio)
+    bg_color = (0, 0, 0) if badness >= len(COLOR_MAP) else COLOR_MAP[badness]
 
     if args.html:
         print("<span style='background-color: #%02x%02x%02x'>" % bg_color, end='')
@@ -72,19 +93,15 @@ max_bits = sorted_lengths[-1][1]
 #    print('cost of %r = %d bits, used %d times' % (c, num_bits, histogram.get(c, 0)))
 
 if args.html:
-    print('<pre>')
+    print("<body style='background-color: #888888; color: #ffffff; font-size: 16px; line-height: 120%; letter-spacing: 1px; text-shadow: 1px 1px #000000;'><pre>")
 
 indent = 0
 at_newline = False
 newline_unless_semicolon = False
 bracket_stack = []
-for (symbol, num_bits) in symbols:
-    if len(symbol) == 1:
-        category = CATEGORY_LITERAL
-    else:
-        category = CATEGORY_REF
-
-    color_on(category, num_bits)
+for (symbol, num_compressed_bits) in symbols:
+    num_decompressed_bytes = len(symbol)
+    color_on(num_decompressed_bytes, num_compressed_bits)
     for c in symbol:
 
         if newline_unless_semicolon and c not in ',;':
@@ -95,7 +112,7 @@ for (symbol, num_bits) in symbols:
         if at_newline:
             color_off()
             print('    ' * indent, end='')
-            color_on(category, num_bits)
+            color_on(num_decompressed_bytes, num_compressed_bits)
             at_newline = False
 
         if c == '{':
@@ -108,7 +125,7 @@ for (symbol, num_bits) in symbols:
             print()
             color_off()
             print('    ' * indent, end='')
-            color_on(category, num_bits)
+            color_on(num_decompressed_bytes, num_compressed_bits)
             newline_unless_semicolon = True
             bracket_stack.pop()
         elif c == '(':
@@ -133,4 +150,4 @@ for (symbol, num_bits) in symbols:
 
 color_off()
 if args.html:
-    print('</pre>')
+    print('</pre></body>')
