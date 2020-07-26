@@ -60,11 +60,8 @@ def color_on(num_decompressed_bytes, num_compressed_bits):
     if args.html:
         print("<span style='background-color: #%02x%02x%02x'>" % bg_color, end='')
     else:
-        print(ansi_color(True, 0, 0, 0), end='') # Black foreground
-        if category == CATEGORY_LITERAL:
-            print(ansi_color(False, *bg_color), end='') # Background color
-        else:
-            print(ansi_color(False, 0, 0, 255), end='') # Background color
+        print(ansi_color(True, 255, 255, 255), end='') # White foreground
+        print(ansi_color(False, *bg_color), end='') # Background color
 
 def color_off():
     if args.no_color:
