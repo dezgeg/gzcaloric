@@ -11,11 +11,12 @@ CATEGORY_REF = 'r'
 HUE_RED = 0
 HUE_GREEN = 1. / 3.
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument('inputfile', help='Path to .png/.gz file.')
 parser.add_argument('-n', '--no-color', action='store_true', help='Skip colors (just pretty-print)')
 parser.add_argument('-r', '--no-format', action='store_true', help='Skip code formatting')
 parser.add_argument('-b', '--bicolor', action='store_true', help='Just show literals vs. backreferences')
+parser.add_argument('-h', '--html', action='store_true', help='HTML output')
 args = parser.parse_args()
 
 def ansi_color(is_fg, r, g, b):
@@ -30,19 +31,29 @@ def ansi_reset():
 def color_on(category, num_bits):
     if args.no_color:
         return
-    print(ansi_color(True, 0, 0, 0), end='') # Black foreground
-    if category == CATEGORY_LITERAL:
-        badness = (num_bits - min_bits) / float(max_bits - min_bits)
-        bg_color = colorsys.hls_to_rgb((1. - badness) * HUE_GREEN, 0.5, 1.)
-        print(ansi_color(False, *map(lambda x: x * 255, bg_color)), end='') # Background color
+
+    badness = (num_bits - min_bits) / float(max_bits - min_bits)
+    bg_color = colorsys.hls_to_rgb((1. - badness) * HUE_GREEN, 0.5, 1.)
+    bg_color = tuple(map(lambda x: x * 255, bg_color))
+
+    if args.html:
+        print("<span style='background-color: #%02x%02x%02x'>" % bg_color, end='')
     else:
-        print(ansi_color(False, 0, 0, 255), end='') # Background color
+        print(ansi_color(True, 0, 0, 0), end='') # Black foreground
+        if category == CATEGORY_LITERAL:
+            print(ansi_color(False, *bg_color), end='') # Background color
+        else:
+            print(ansi_color(False, 0, 0, 255), end='') # Background color
 
 def color_off():
     if args.no_color:
         return
-    print(ansi_color(False, 0, 0, 0), end='') # Black background
-    #ansi_reset()
+
+    if args.html:
+        print("</span>", end='')
+    else:
+        print(ansi_color(False, 0, 0, 0), end='') # Black background
+        #ansi_reset()
 
 literal_lengths_map, symbols = pyflate.doit(args.inputfile)
 
@@ -54,11 +65,14 @@ for (symbol, num_bits) in symbols:
 sorted_lengths = list(sorted(literal_lengths_map.iteritems(), key=lambda x: (x[1], x[0])))
 min_bits = sorted_lengths[0][1]
 max_bits = sorted_lengths[-1][1]
-for c, num_bits in sorted_lengths:
-    color_on(CATEGORY_LITERAL, num_bits)
-    print(' ', end='')
-    ansi_reset()
-    print('cost of %r = %d bits, used %d times' % (c, num_bits, histogram.get(c, 0)))
+#for c, num_bits in sorted_lengths:
+#    color_on(CATEGORY_LITERAL, num_bits)
+#    print(' ', end='')
+#    color_off()
+#    print('cost of %r = %d bits, used %d times' % (c, num_bits, histogram.get(c, 0)))
+
+if args.html:
+    print('<pre>')
 
 indent = 0
 at_newline = False
@@ -70,8 +84,8 @@ for (symbol, num_bits) in symbols:
     else:
         category = CATEGORY_REF
 
+    color_on(category, num_bits)
     for c in symbol:
-        color_on(category, num_bits)
 
         if newline_unless_semicolon and c not in ',;':
             print()
@@ -115,4 +129,8 @@ for (symbol, num_bits) in symbols:
         if at_newline:
             color_off()
             print()
-ansi_reset()
+    color_off()
+
+color_off()
+if args.html:
+    print('</pre>')
