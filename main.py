@@ -134,6 +134,11 @@ for (symbol, num_compressed_bits) in symbols:
                 color_on(num_decompressed_bytes, num_compressed_bits)
             newline_unless_semicolon = True
             bracket_stack.pop()
+        was_string = False
+        if c == '`' and len(bracket_stack) > 0 and bracket_stack[-1] == '`':
+            indent -= 1
+            bracket_stack.pop()
+            was_string = True
         if at_newline:
             color_off()
             print('    ' * indent, end='')
@@ -145,13 +150,9 @@ for (symbol, num_compressed_bits) in symbols:
             indent += 1
             at_newline = True
             bracket_stack.append('{')
-        if c == '`':
-            if len(bracket_stack) == 0 or bracket_stack[-1] != '`':
-                bracket_stack.append('`')
-                indent += 1
-            else:
-                indent -= 1
-                bracket_stack.pop()
+        if c == '`' and not was_string and (len(bracket_stack) == 0 or bracket_stack[-1] != '`'):
+            bracket_stack.append('`')
+            indent += 1
         elif c == '(':
             bracket_stack.append('(')
         elif c == ')':
