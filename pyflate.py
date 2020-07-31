@@ -391,7 +391,7 @@ def inflate(b):
 
     return literal_lengths_map, symbols
 
-def doit(filename):
+def parse_file(filename):
     with open(filename) as input:
         field = RBitfield(input)
         b = Bitfield(field)
@@ -431,4 +431,4 @@ def doit(filename):
                     return inflate(b)
                 b.readbits(8 * (length + 4)) # Ignore data + CRC
         else:
-            raise "Unknown file magic "+hex(magic)+", not a gzip file"
+            raise "Unknown file magic "+hex(magic)+", not a gzip or PNG file"

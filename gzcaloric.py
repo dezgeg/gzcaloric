@@ -73,7 +73,7 @@ def color_off():
     else:
         print(ansi_color(False, 0, 0, 0), end='') # Black background
 
-literal_lengths_map, symbols = pyflate.doit(args.inputfile)
+literal_lengths_map, symbols = pyflate.parse_file(args.inputfile)
 
 histogram = {}
 for (symbol, num_bits) in symbols:
