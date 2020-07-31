@@ -361,7 +361,7 @@ def inflate(b):
                     # print "reading", extra_length_bits(r), "extra bits for len"
                     length_extra = b.readbits(extra_length_bits(r))
                     length = length_base(r) + length_extra
-                    
+
                     r1 = main_distances.find_next_symbol(b)
                     if 0 <= r1 <= 29:
                         # print "reading", extra_distance_bits(r1), "extra bits for dist"
