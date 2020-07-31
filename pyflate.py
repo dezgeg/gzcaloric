@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright 2006--2007-01-21 Paul Sladen
 # http://www.paul.sladen.org/projects/compression/
 #
